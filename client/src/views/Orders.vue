@@ -27,6 +27,42 @@
         </div>
       </div>
 
+      <div v-if="submittedOrders.length > 0" class="card">
+        <div class="card-header">
+          <h3 class="card-title">{{ t('orders.submittedOrders') }} ({{ submittedOrders.length }})</h3>
+        </div>
+        <div class="table-container">
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th class="col-order-number">{{ t('orders.table.orderNumber') }}</th>
+                <th class="col-items">{{ t('orders.table.items') }}</th>
+                <th class="col-value">{{ t('orders.table.totalValue') }}</th>
+                <th class="col-date">{{ t('orders.table.orderDate') }}</th>
+                <th class="col-date">{{ t('orders.table.expectedDelivery') }}</th>
+                <th class="col-lead">{{ t('orders.leadTime') }}</th>
+                <th class="col-status">{{ t('orders.table.status') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="order in submittedOrders" :key="order.id">
+                <td class="col-order-number"><strong>{{ order.order_number }}</strong></td>
+                <td class="col-items">{{ t('orders.itemsCount', { count: order.items.length }) }}</td>
+                <td class="col-value"><strong>{{ currencySymbol }}{{ order.total_value.toLocaleString() }}</strong></td>
+                <td class="col-date">{{ formatDate(order.order_date) }}</td>
+                <td class="col-date">{{ formatDate(order.expected_delivery) }}</td>
+                <td class="col-lead">{{ getLeadTimeDays(order) }}</td>
+                <td class="col-status">
+                  <span :class="['badge', getOrderStatusClass(order.status)]">
+                    {{ t('status.' + order.status.toLowerCase()) }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">{{ t('orders.allOrders') }} ({{ orders.length }})</h3>
@@ -129,6 +165,24 @@ export default {
       loadOrders()
     })
 
+    const submittedOrders = computed(() => {
+      return orders.value.filter(order => order.status === 'Submitted')
+    })
+
+    const getLeadTimeDays = (order) => {
+      if (order.lead_time_days != null) {
+        return t('orders.leadTimeDays', { days: order.lead_time_days })
+      }
+      // Fallback: compute from dates
+      const orderDate = new Date(order.order_date)
+      const deliveryDate = new Date(order.expected_delivery)
+      if (!isNaN(orderDate.getTime()) && !isNaN(deliveryDate.getTime())) {
+        const diffDays = Math.round((deliveryDate - orderDate) / (1000 * 60 * 60 * 24))
+        return t('orders.leadTimeDays', { days: diffDays })
+      }
+      return '-'
+    }
+
     const getOrdersByStatus = (status) => {
       return orders.value.filter(order => order.status === status)
     }
@@ -160,8 +214,10 @@ export default {
       loading,
       error,
       orders,
+      submittedOrders,
       getOrdersByStatus,
       getOrderStatusClass,
+      getLeadTimeDays,
       formatDate,
       currencySymbol,
       translateProductName,
@@ -200,6 +256,10 @@ export default {
 }
 
 .col-value {
+  width: 120px;
+}
+
+.col-lead {
   width: 120px;
 }
 
